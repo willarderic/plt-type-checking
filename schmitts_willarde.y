@@ -160,7 +160,7 @@ N_PARENTHESIZED_EXPR    : N_ARITHLOGIC_EXPR
                                 $$.type = $1.type;
                                 $$.numParams = $1.numParams;
                                 $$.returnType = $1.returnType;
-                            
+                            }
                         | N_EXPR_LIST 
                             {
                                 printRule("PARENTHESIZED_EXPR", "EXPR_LIST");
