@@ -41,6 +41,15 @@ public:
     else return(true);
   }
 
+  int getEntryType(string entry) {
+    return hashTable[entry].type;
+  }
+
+  // returns the number of entries in the current scope
+  int getNumParams() {
+    return map.size();
+  } 
+
 };
 
 #endif  // SYMBOL_TABLE_H

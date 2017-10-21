@@ -15,6 +15,7 @@
 %{
 #include <stdio.h>
 #include <stack>
+#include <cstring>
 #include "SymbolTable.h"
 
 int numLines = 1;
@@ -37,6 +38,7 @@ extern "C"
 %}
 
 %union{
+    char op;
 	char* text;
     TypeInfo typeInfo;
 };
@@ -47,8 +49,8 @@ extern "C"
 %token T_AND T_OR T_NOT
 %token T_LT T_GT T_LE T_GE T_EQ T_NE
 %token T_IDENT T_INTCONST T_STRCONST T_T T_NIL T_UNKNOWN
-
-%type <text> T_IDENT
+ 
+%type <text> T_IDENT N_BIN_OP N_ARITH_OP N_LOG_OP N_REL_OP
 %type <typeInfo> N_CONST N_EXPR N_PARENTHESIZED_EXPR N_IF_EXPR N_ARITHLOGIC_EXPR 
 %type <typeInfo> N_INPUT_EXPR N_EXPR_LIST N_LAMBDA_EXPR N_PRINT_EXPR
 
@@ -78,6 +80,9 @@ N_EXPR                  : N_CONST
 									yyerror("Undefined identifier");
                                     return 1;
 								}
+                                $$.type = getEntryType(string($1));
+                                $$.numParams = NOT_APPLICABLE;
+                                $$.returnType = NOT_APPLICABLE;
                             }
                         | T_LPAREN N_PARENTHESIZED_EXPR T_RPAREN 
                             {
@@ -155,7 +160,7 @@ N_PARENTHESIZED_EXPR    : N_ARITHLOGIC_EXPR
                                 $$.type = $1.type;
                                 $$.numParams = $1.numParams;
                                 $$.returnType = $1.returnType;
-                            }
+                            
                         | N_EXPR_LIST 
                             {
                                 printRule("PARENTHESIZED_EXPR", "EXPR_LIST");
@@ -166,46 +171,112 @@ N_PARENTHESIZED_EXPR    : N_ARITHLOGIC_EXPR
 N_ARITHLOGIC_EXPR       : N_UN_OP N_EXPR  
                             {
                                 printRule("ARITHLOGIC_EXPR", "UN_OP EXPR");
-                                $$.type = $2.type;
-                                $$.numParams = $2.numParams;
-                                $$.returnType = $2.returnType;
+                                if ($2.type == FUNCTION) {
+                                    yyerror("Arg 1 cannot be a function");
+                                    return(1);
+                                }
+                                $$.type = BOOL;
+                                $$.numParams = NOT_APPLICABLE;
+                                $$.returnType = NOT_APPLICABLE;
                             }
                         | N_BIN_OP N_EXPR N_EXPR 
                             {
+                                // add text attribute to N_BIN_OP
                                 printRule("ARITHLOGIC_EXPR", "BIN_OP EXPR EXPR");
-                                if ($2.type == INT) {
-                                    if ($2.type == $3.type) {
-                                        $$.type = $2.type;
-                                        $$.numParams = $2.numParams;
-                                        $$.returnType = $2.returnType;
-                                    } else {
-                                        yyerror();
+                                if (strcmp($1.text, "*") == 0 || strcmp($1.text, "/") == 0 ||
+                                    strcmp($1.text, "+") == 0 ||strcmp($1.text, "-") == 0)
+                                {
+                                    if ($2.type != INT) {
+                                        yyerror("Arg 1 must be integer");
+                                        return 1;
+                                    } else if ($3.type != INT) {
+                                        yyerror("Arg 2 must be integer");
+                                        return 1;
                                     }
-                                } else {
-                                    yyerror();
+                                    $$.type = INT;
+                                    $$.numParams = NOT_APPLICABLE;
+                                    $$.returnType = NOT_APPLICABLE;
+                                } else if (strcmp($1.text, "and") == 0 || strcmp($1.text, "or") == 0) {
+                                    if ($2.type == FUNCTION) {
+                                        yyerror("Arg 1 cannot be function");
+                                        return 1;
+                                    }
+                                    if ($2.type == INT) {
+                                        if ($3.type == FUNCTION) {
+                                            yyerror("Arg 2 cannot be function");
+                                            return 1;
+                                        }
+                                        $$.type = BOOL;
+                                        $$.numParams = NOT_APPLICABLE;
+                                        $$.returnType = NOT_APPLICABLE;
+                                    } else if ($2.type == STR) {
+                                        if ($3.type == FUNCTION) {
+                                            yyerror("Arg 2 cannot be function");
+                                            return 1;
+                                        }
+                                        $$.type = BOOL;
+                                        $$.numParams = NOT_APPLICABLE;
+                                        $$.returnType = NOT_APPLICABLE;
+                                    } else if ($2.type == BOOL) {
+                                        if ($3.type == FUNCTION) {
+                                            yyerror("Arg 2 cannot be function");
+                                            return 1;
+                                        }
+                                        $$.type = BOOL;
+                                        $$.numParams = NOT_APPLICABLE;
+                                        $$.returnType = NOT_APPLICABLE;
+                                    }
+                                } else if (strcmp($1.text, "<") || strcmp($1.text, ">") ||
+                                           strcmp($1.text, ">=") || strcmp($1.text, "<=") ||
+                                           strcmp($1.text, "=") || strcmp($1.text, "/=")) {
+                                    if ($2.type == FUNCTION) {
+                                        yyerror("Arg 1 cannot be function");
+                                        return 1;
+                                    } else if ($2.type == BOOL) {
+                                        yyerror("Arg 1 must be integer or string");
+                                        return 1;
+                                    }
+                                    if ($2.type == INT) {
+                                        if ($3.type != INT) {
+                                            yyerror("Arg 2 must be integer");
+                                            return 1;
+                                        }
+                                        $$.type = BOOL;
+                                        $$.numParams = NOT_APPLICABLE;
+                                        $$.returnType = NOT_APPLICABLE;
+                                    } else if ($2.type == STR) {
+                                        if ($3.type != STR) {
+                                            yyerror("Arg 2 must be string");
+                                            return 1;
+                                        }
+                                        $$.type = BOOL;
+                                        $$.numParams = NOT_APPLICABLE;
+                                        $$.returnType = NOT_APPLICABLE;
+                                    }
                                 }
                             }
 N_IF_EXPR               : T_IF N_EXPR N_EXPR N_EXPR 
                             {
                                 printRule("IF_EXPR", "IF EXPR EXPR EXPR");
-                                if ($2.type != FUNCTION) {
-                                    $$.type = $3.type | $4.type;
-                                    $$.numParams = NOT_APPLICABLE;
-                                    $$.returnType = NOT_APPLICABLE
-                                } else {
-                                    yyerror("Expecting");
+                                
+                                if ($2.type == FUNCTION) {
+                                    yyerror("Arg 1 cannot be a function");
+                                    return(1);
                                 }
+                                $$.type = $3.type | $4.type;
+                                $$.numParams = NOT_APPLICABLE;
+                                $$.returnType = NOT_APPLICABLE
                             }
 N_LET_EXPR              : T_LETSTAR T_LPAREN N_ID_EXPR_LIST T_RPAREN N_EXPR
                             {
                                 printRule("LET_EXPR", "let* ( ID_EXPR_LIST ) EXPR");
-                                if ($5.type != FUNCTION) {
-                                    $$.type = $5.type;
-                                    $$.numParams = $5.numParams;
-                                    $$.returnType = $5.returnType;
-                                } else {
-                                    yyerror();
+                                if ($5.type == FUNCTION) {
+                                    yyerror("Arg 1 cannot be a function"); 
+                                    return(1);
                                 }
+                                $$.type = $5.type;
+                                $$.numParams = $5.numParams;
+                                $$.returnType = $5.returnType;
 								endScope();
                             }
 N_ID_EXPR_LIST          : /* epsilon */ 
@@ -227,7 +298,14 @@ N_ID_EXPR_LIST          : /* epsilon */
 N_LAMBDA_EXPR           : T_LAMBDA T_LPAREN N_ID_LIST T_RPAREN N_EXPR 
                             {
                                 printRule("LAMBDA_EXPR", "lambda ( ID_LIST ) EXPR");
-								endScope();
+								if ($5.type == FUNCTION) {
+                                    yyerror("Arg 1 cannot be function");
+                                    return 1;
+                                }
+                                $$.type = FUNCTION;
+                                $$.returnType = $5.type;
+                                $$.numParams = getNumParams();
+                                endScope();
                             }
 N_ID_LIST               : /* epsilon */  
                             {
@@ -248,11 +326,13 @@ N_ID_LIST               : /* epsilon */
 N_PRINT_EXPR            : T_PRINT N_EXPR 
                             {
                                 printRule("PRINT_EXPR", "print EXPR");
-                                if ($2.type != FUNCTION) {
-                                    $$.type = $2.type;
-                                    $$.numParams = $2.numParams;
-                                    $$.returnType = $2.returnType;
-                                }
+                                if ($2.type == FUNCTION) {
+                                    yyerror("Arg 1 cannot be a function"); 
+                                    return(1);
+                                } 
+                                $$.type = $2.type;
+                                $$.numParams = $2.numParams;
+                                $$.returnType = $2.returnType;
                             }
 N_INPUT_EXPR            : T_INPUT 
                             {
@@ -267,67 +347,83 @@ N_EXPR_LIST             : N_EXPR N_EXPR_LIST
                             }
                         | N_EXPR 
                             {
+                                // hard one
                                 printRule("EXPR_LIST", "EXPR");
                             }
 N_BIN_OP                : N_ARITH_OP 
                             {
                                 printRule("BIN_OP", "ARITH_OP");
+                                $$.text = $1.text;
                             }
                         | N_LOG_OP 
                             {
                                 printRule("BIN_OP", "LOG_OP");
+                                $$.text = $1.text;
                             }
                         | N_REL_OP 
                             {
                                 printRule("BIN_OP", "REL_OP");
+                                $$.text = $1.text
                             }
 N_ARITH_OP              : T_MULT 
                             {
                                 printRule("ARITH_OP", "*");
+                                $$.text = setText("*");
                             }               
                         | T_SUB 
                             {
                                 printRule("ARITH_OP", "-");
+                                $$.text = setText("-");
                             }
                         | T_DIV 
                             {
                                 printRule("ARITH_OP", "/");
+                                $$.text = setText("/");
                             }
                         | T_ADD 
                             {
                                 printRule("ARITH_OP", "+");
+                                $$.text = setText("+");
                             }
 N_LOG_OP                : T_AND 
                             {
                                 printRule("LOG_OP", "and");
+                                $$.text = setText("and");
                             }
                         | T_OR 
                             {
                                 printRule("LOG_OP", "or");
+                                $$.text = setText("or");
                             }
 N_REL_OP                : T_LT 
                             {
                                 printRule("REL_OP", "<");
+                                $$.text = setText("<");
                             }
                         | T_GT 
                             {
                                 printRule("REL_OP", ">");
+                                $$.text = setText(">");
                             }
                         | T_LE 
                             {
                                 printRule("REL_OP", "<=");
+                                $$.text = setText("<=");
                             }
                         | T_GE 
                             {
                                 printRule("REL_OP", ">=");
+                                $$.text = setText(">=");
                             }
                         | T_EQ 
                             {
                                 printRule("REL_OP", "=");
+                                $$.text = setText("=");
                             }
                         | T_NE 
                             {
                                 printRule("REL_OP", "/=");
+                                $$.text = setText("/=");
                             }
 N_UN_OP                 : T_NOT 
                             {
@@ -353,6 +449,12 @@ int yyerror(const char *s)
 void printTokenInfo(const char* tokenType, const char* lexeme) 
 {
   printf("TOKEN: %s  LEXEME: %s\n", tokenType, lexeme);
+}
+
+char* setText(string s) {
+    char* cstr = new char[s.length() + 1];
+    strcpy(cstr, str.c_str());
+    return cstr;
 }
 
 void beginScope() {

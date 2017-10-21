@@ -6,10 +6,10 @@ using namespace std;
 
 #define UNDEFINED -1
 #define FUNCTION 0
-#define INT 1
-#define STR 2
-#define INT_OR_STR 3
-#define BOOL 4
+#define INT 1 // 0001
+#define STR 2 // 0010
+#define INT_OR_STR 3 // 0011
+#define BOOL 4 
 #define INT_OR_BOOL 5
 #define STR_OR_BOOL 6
 #define INT_OR_STR_OR_BOOL 7
