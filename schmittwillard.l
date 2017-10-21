@@ -23,7 +23,8 @@ LETTER          [a-zA-Z]
 
 IDENT			(_|{LETTER})({LETTER}|{DIGIT}|_)* 
 INTCONST        (\+|-)?{DIGIT}+
-STRCONST        \"(.)*\"
+DOUBLE_QUOTE    \"
+STRCONST        {DOUBLE_QUOTE}[^\"\n]*{DOUBLE_QUOTE} 
 COMMENT         ;(.)*
 
 %%

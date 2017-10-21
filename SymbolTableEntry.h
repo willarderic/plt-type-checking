@@ -9,7 +9,7 @@ using namespace std;
 #define INT 1 // 0001
 #define STR 2 // 0010
 #define INT_OR_STR 3 // 0011
-#define BOOL 4 
+#define BOOL 4
 #define INT_OR_BOOL 5
 #define STR_OR_BOOL 6
 #define INT_OR_STR_OR_BOOL 7
@@ -22,7 +22,7 @@ typedef struct {
   int returnType;
 } TypeInfo;
 
-class SymbolTableEntry 
+class SymbolTableEntry
 {
 private:
   // Member variables
@@ -31,8 +31,8 @@ private:
 
 public:
   // Constructors
-  SymbolTableEntry( ) { name = ""; typeInfo.type = UNDEFINED; typeInfo.numParams = 0; typeInfo.returnType = NOT_APPLICABLE; }
-
+  SymbolTableEntry( ) { this->name = ""; }
+  SymbolTableEntry(const string &name, const int type) { this->name = name; this->typeInfo.type = type; }
   SymbolTableEntry(const string &name, TypeInfo typeInfo) { this->name = name; this->typeInfo = typeInfo; }
 
   // Accessors
