@@ -31,18 +31,9 @@ private:
 
 public:
   // Constructors
-  SymbolTableEntry( ) { name = ""; typeInfo.type = UNDEFINED; }
+  SymbolTableEntry( ) { name = ""; typeInfo.type = UNDEFINED; typeInfo.numParams = 0; typeInfo.returnType = NOT_APPLICABLE; }
 
-  SymbolTableEntry(const string &name, const int type) { makeTableEntry(name, type, 0, NOT_APPLICABLE); }
-
-  SymbolTableEntry(const string &name, const int type, const int numParams, const int returnType) { makeTableEntry(name, type, numParams, returnType); }
-
-  void makeTableEntry(const string &name, const int type, const int numParams, const int returnType) {
-    this->name = name;
-    this->typeInfo.type = type;
-    this->typeInfo.numParams = numParams;
-    this->typeInfo.returnType = returnType;
-  }
+  SymbolTableEntry(const string &name, TypeInfo typeInfo) { this->name = name; this->typeInfo = typeInfo; }
 
   // Accessors
   string getName() const { return name; }

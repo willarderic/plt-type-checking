@@ -179,7 +179,7 @@ N_ARITHLOGIC_EXPR       : N_UN_OP N_EXPR
                                         $$.numParams = $2.numParams;
                                         $$.returnType = $2.returnType;
                                     } else {
-                                        yyerror()
+                                        yyerror();
                                     }
                                 } else {
                                     yyerror();
@@ -190,6 +190,10 @@ N_IF_EXPR               : T_IF N_EXPR N_EXPR N_EXPR
                                 printRule("IF_EXPR", "IF EXPR EXPR EXPR");
                                 if ($2.type != FUNCTION) {
                                     $$.type = $3.type | $4.type;
+                                    $$.numParams = NOT_APPLICABLE;
+                                    $$.returnType = NOT_APPLICABLE
+                                } else {
+                                    yyerror("Expecting");
                                 }
                             }
 N_LET_EXPR              : T_LETSTAR T_LPAREN N_ID_EXPR_LIST T_RPAREN N_EXPR
@@ -197,8 +201,10 @@ N_LET_EXPR              : T_LETSTAR T_LPAREN N_ID_EXPR_LIST T_RPAREN N_EXPR
                                 printRule("LET_EXPR", "let* ( ID_EXPR_LIST ) EXPR");
                                 if ($5.type != FUNCTION) {
                                     $$.type = $5.type;
+                                    $$.numParams = $5.numParams;
+                                    $$.returnType = $5.returnType;
                                 } else {
-                                    yyerror()
+                                    yyerror();
                                 }
 								endScope();
                             }
@@ -210,12 +216,12 @@ N_ID_EXPR_LIST          : /* epsilon */
                             {
                                 printRule("ID_EXPR_LIST", "ID_EXPR_LIST ( IDENT EXPR )");
 								bool found = scopeStack.top().findEntry(string($3));
-								printf("___Adding %s to symbol table\n", string($3).c_str());
+								printf("___Adding %s to symbol table\n", $3);
 								if (found) {
 									yyerror("Multiply defined identifier");
                                     return 1;
 								} else {
-									scopeStack.top().addEntry(SymbolTableEntry(string($3), ));
+									scopeStack.top().addEntry(SymbolTableEntry(string($3), $4));
 								}
                             }
 N_LAMBDA_EXPR           : T_LAMBDA T_LPAREN N_ID_LIST T_RPAREN N_EXPR 
@@ -231,7 +237,7 @@ N_ID_LIST               : /* epsilon */
                             {
                                 printRule("ID_LIST", "ID_LIST IDENT");
 								bool found = scopeStack.top().findEntry(string($2));
-                                printf("___Adding %s to symbol table\n", string($2).c_str());
+                                printf("___Adding %s to symbol table\n", $2);
 								if (found) {
 									yyerror("Multiply defined identifier");
                                     return 1;
@@ -242,6 +248,11 @@ N_ID_LIST               : /* epsilon */
 N_PRINT_EXPR            : T_PRINT N_EXPR 
                             {
                                 printRule("PRINT_EXPR", "print EXPR");
+                                if ($2.type != FUNCTION) {
+                                    $$.type = $2.type;
+                                    $$.numParams = $2.numParams;
+                                    $$.returnType = $2.returnType;
+                                }
                             }
 N_INPUT_EXPR            : T_INPUT 
                             {
